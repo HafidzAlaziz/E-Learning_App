@@ -1,0 +1,380 @@
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:e_learning_app/core/theme.dart';
+import 'package:e_learning_app/widgets/user_avatar.dart';
+
+class TeacherAssignmentDetailScreen extends StatefulWidget {
+  final String courseId;
+  final String meetingId;
+  final String assignmentId;
+  final Map<String, dynamic> assignmentData;
+
+  const TeacherAssignmentDetailScreen({
+    super.key,
+    required this.courseId,
+    required this.meetingId,
+    required this.assignmentId,
+    required this.assignmentData,
+  });
+
+  @override
+  State<TeacherAssignmentDetailScreen> createState() =>
+      _TeacherAssignmentDetailScreenState();
+}
+
+class _TeacherAssignmentDetailScreenState
+    extends State<TeacherAssignmentDetailScreen> {
+  // List of all students enrolled in the course
+  List<Map<String, dynamic>> enrolledStudents = [];
+
+  // Map of studentId -> Submission Data
+  Map<String, Map<String, dynamic>> submissions = {};
+
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchData();
+  }
+
+  Future<void> _fetchData() async {
+    setState(() => isLoading = true);
+    try {
+      // 1. Fetch Enrolled Students
+      // In a real app with 'enrollments' collection:
+      final enrollments = await FirebaseFirestore.instance
+          .collection('enrollments')
+          .where('courseId', isEqualTo: widget.courseId)
+          .get();
+
+      // Mocking student data if enrollments are empty/incomplete
+      // For now, we'll try to fetch user details for each enrollment
+      List<Map<String, dynamic>> students = [];
+      for (var doc in enrollments.docs) {
+        final studentId = doc['studentId'];
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(studentId)
+            .get();
+        final data = userDoc.data();
+
+        students.add({
+          'uid': studentId,
+          'name': data?['displayName'] ?? 'Siswa (Tanpa Data)',
+          'email': data?['email'] ?? '-',
+          'photoBase64': data?['photoBase64'],
+          'photoUrl': data?['photoUrl'],
+        });
+      }
+
+      // If no real enrollments found (dev mode), add some mocks if needed or just empty
+      if (students.isEmpty) {
+        // Optional: Add mock students for demonstration if db is empty
+        // students = [
+        //   {'uid': 'mock1', 'name': 'Ahmad Siswa', 'email': 'ahmad@test.com'},
+        //   {'uid': 'mock2', 'name': 'Budi Belajar', 'email': 'budi@test.com'},
+        // ];
+      }
+
+      // 2. Fetch Submissions for this assignment
+      final submissionSnapshot = await FirebaseFirestore.instance
+          .collection('courses')
+          .doc(widget.courseId)
+          .collection('meetings')
+          .doc(widget.meetingId)
+          .collection('assignments')
+          .doc(widget.assignmentId)
+          .collection('submissions')
+          .get();
+
+      Map<String, Map<String, dynamic>> subs = {};
+      for (var doc in submissionSnapshot.docs) {
+        subs[doc.id] = doc.data(); // doc.id should be studentId
+      }
+
+      if (mounted) {
+        setState(() {
+          enrolledStudents = students;
+          submissions = subs;
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetching data: $e");
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Categorize students
+    final submitted = enrolledStudents
+        .where((s) => submissions.containsKey(s['uid']))
+        .toList();
+    final notSubmitted = enrolledStudents
+        .where((s) => !submissions.containsKey(s['uid']))
+        .toList();
+
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        appBar: AppBar(
+          title: const Text("Detail Tugas",
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: "Belum Mengumpulkan"),
+              Tab(text: "Sudah Mengumpulkan"),
+            ],
+            indicatorColor: AppTheme.primaryColor,
+            labelColor: AppTheme.primaryColor,
+            unselectedLabelColor: Colors.grey,
+          ),
+        ),
+        body: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              color: Theme.of(context).cardColor,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.assignmentData['title'] ?? 'Tugas',
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    widget.assignmentData['description'] ??
+                        'Tidak ada deskripsi',
+                    style: TextStyle(color: Colors.grey.shade600),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      _buildSummaryChip("Total Siswa",
+                          enrolledStudents.length.toString(), Colors.blue),
+                      const SizedBox(width: 8),
+                      _buildSummaryChip(
+                          "Sudah", submitted.length.toString(), Colors.green),
+                      const SizedBox(width: 8),
+                      _buildSummaryChip("Belum", notSubmitted.length.toString(),
+                          Colors.orange),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : TabBarView(
+                      children: [
+                        _buildStudentList(notSubmitted, false),
+                        _buildStudentList(submitted, true),
+                      ],
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryChip(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label,
+              style: TextStyle(
+                  color: color, fontWeight: FontWeight.bold, fontSize: 12)),
+          const SizedBox(width: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              value,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 10),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStudentList(
+      List<Map<String, dynamic>> students, bool isSubmitted) {
+    if (students.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isSubmitted
+                  ? Icons.assignment_turned_in_outlined
+                  : Icons.pending_actions_outlined,
+              size: 64,
+              color: Colors.grey.shade300,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              isSubmitted
+                  ? "Belum ada yang mengumpulkan"
+                  : "Semua sudah mengumpulkan!",
+              style: TextStyle(color: Colors.grey.shade500),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: students.length,
+      itemBuilder: (context, index) {
+        final student = students[index];
+        final submission = submissions[student['uid']];
+
+        // Helper for grade color
+        Color getGradeColor(double val) {
+          if (val >= 85) return Colors.green;
+          if (val >= 75) return Colors.blue;
+          if (val >= 60) return Colors.orange;
+          return Colors.red;
+        }
+
+        return Card(
+          elevation: 1,
+          margin: const EdgeInsets.only(bottom: 12),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: ListTile(
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            leading: UserAvatar(
+              radius: 24,
+              uid: student['uid'],
+              photoBase64: student['photoBase64'],
+              photoUrl: student['photoUrl'],
+            ),
+            title: Text(student['name'],
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: isSubmitted
+                ? Text(
+                    "Dikirim: ${submission?['submittedAt'] != null ? (submission!['submittedAt'] as Timestamp).toDate().toString().substring(0, 16) : '-'}",
+                    style:
+                        TextStyle(color: Colors.green.shade700, fontSize: 12),
+                  )
+                : Text("Belum mengumpulkan",
+                    style:
+                        TextStyle(color: Colors.orange.shade700, fontSize: 12)),
+            trailing: isSubmitted
+                ? Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.check_circle,
+                          color: Colors.green, size: 20),
+                      if (submission?['grade'] != null)
+                        Text(
+                          "${submission!['grade']}",
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: getGradeColor(
+                                  (submission!['grade'] as num).toDouble()),
+                              fontSize: 12),
+                        ),
+                    ],
+                  )
+                : const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+            onTap: isSubmitted
+                ? () => _showGradeDialog(student['uid'], submission)
+                : null,
+          ),
+        );
+      },
+    );
+  }
+
+  void _showGradeDialog(String studentId, Map<String, dynamic>? submission) {
+    if (submission == null) return;
+
+    final gradeController =
+        TextEditingController(text: submission['grade']?.toString() ?? "");
+    final feedbackController =
+        TextEditingController(text: submission['feedback'] ?? "");
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Beri Nilai"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: gradeController,
+              keyboardType: TextInputType.number,
+              decoration: AppTheme.inputDecoration(
+                  context, "Nilai (0-100)", Icons.score),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: feedbackController,
+              maxLines: 3,
+              decoration: AppTheme.inputDecoration(
+                  context, "Feedback (Opsional)", Icons.comment),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Batal")),
+          ElevatedButton(
+            onPressed: () async {
+              final grade = double.tryParse(gradeController.text);
+              if (grade == null) return;
+
+              await FirebaseFirestore.instance
+                  .collection('courses')
+                  .doc(widget.courseId)
+                  .collection('meetings')
+                  .doc(widget.meetingId)
+                  .collection('assignments')
+                  .doc(widget.assignmentId)
+                  .collection('submissions')
+                  .doc(studentId)
+                  .update({
+                'grade': grade,
+                'feedback': feedbackController.text,
+                'gradedAt': FieldValue.serverTimestamp(),
+              });
+
+              if (mounted) {
+                Navigator.pop(context);
+                _fetchData();
+              }
+            },
+            child: const Text("Simpan"),
+          ),
+        ],
+      ),
+    );
+  }
+}
