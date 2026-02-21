@@ -383,97 +383,238 @@ class _StudentCourseDetailScreenState extends State<StudentCourseDetailScreen> {
       statusText = "Belum Ada";
     }
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isTarget
-            ? statusColor.withValues(alpha: 0.05)
-            : Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isTarget ? statusColor : Colors.grey.withValues(alpha: 0.2),
-          width: isTarget ? 1.5 : 1,
+    return InkWell(
+      onTap: () => _showSubmissionDialog(assignment),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isTarget
+              ? statusColor.withValues(alpha: 0.05)
+              : Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isTarget ? statusColor : Colors.grey.withValues(alpha: 0.2),
+            width: isTarget ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                  category.toLowerCase().contains('uis')
+                      ? Icons.quiz_outlined
+                      : Icons.assignment_outlined,
+                  color: statusColor,
+                  size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    assignment['title'] ?? "Tugas",
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(category,
+                            style: const TextStyle(
+                                fontSize: 10, color: Colors.grey)),
+                      ),
+                      if (deadline != null)
+                        Text(
+                          "Exp: ${DateFormat('d MMM', 'id_ID').format(deadline)}",
+                          style:
+                              TextStyle(color: Colors.grey[600], fontSize: 10),
+                        ),
+                    ],
+                  )
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(statusIcon, size: 12, color: statusColor),
+                  const SizedBox(width: 4),
+                  Text(
+                    statusText,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-                category.toLowerCase().contains('uis')
-                    ? Icons.quiz_outlined
-                    : Icons.assignment_outlined,
-                color: statusColor,
-                size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  assignment['title'] ?? "Tugas",
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+    );
+  }
+
+  void _showSubmissionDialog(Map<String, dynamic> assignment) {
+    final submission = assignment['submission'];
+    final bool isSubmitted = submission != null;
+    final bool isGraded = submission?['grade'] != null;
+
+    if (isGraded) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("Tugas Dinilai"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Nilai: ${submission['grade']}",
                   style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 13),
-                ),
-                const SizedBox(height: 4),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(category,
-                          style: const TextStyle(
-                              fontSize: 10, color: Colors.grey)),
-                    ),
-                    if (deadline != null)
-                      Text(
-                        "Exp: ${DateFormat('d MMM', 'id_ID').format(deadline)}",
-                        style: TextStyle(color: Colors.grey[600], fontSize: 10),
-                      ),
-                  ],
-                )
-              ],
-            ),
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green)),
+              const SizedBox(height: 8),
+              Text(
+                  "Feedback: ${submission['feedback'] ?? 'Tidak ada feedback'}",
+                  style: TextStyle(color: Colors.grey[700])),
+            ],
           ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(statusIcon, size: 12, color: statusColor),
-                const SizedBox(width: 4),
-                Text(
-                  statusText,
-                  style: TextStyle(
-                    color: statusColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 10,
-                  ),
-                ),
-              ],
-            ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Tutup")),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final contentController =
+        TextEditingController(text: submission?['content'] ?? "");
+    bool isSaving = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(isSubmitted ? "Edit Pengumpulan" : "Kumpulkan Tugas"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(assignment['title'] ?? 'Tugas',
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text(
+                  assignment['description'] ??
+                      'Silakan lampirkan jawaban Anda.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+              const SizedBox(height: 16),
+              TextField(
+                controller: contentController,
+                maxLines: 4,
+                decoration: AppTheme.inputDecoration(
+                    context, "Link atau Jawaban Teks", Icons.link),
+              ),
+            ],
           ),
-        ],
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Batal")),
+            ElevatedButton(
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      if (contentController.text.trim().isEmpty) return;
+
+                      setDialogState(() => isSaving = true);
+                      try {
+                        final uid = FirebaseAuth.instance.currentUser?.uid;
+                        final name =
+                            FirebaseAuth.instance.currentUser?.displayName;
+
+                        // Path: courses/{courseId}/meetings/{meetingId}/assignments/{assignmentId}/submissions/{studentId}
+                        // Need IDs from context... but we only have assignment Map.
+                        // Let's find IDs from the _meetings list.
+                        String? meetingId;
+                        for (var m in _meetings) {
+                          final assigns = m['assignments'] as List;
+                          if (assigns.any((a) => a['id'] == assignment['id'])) {
+                            meetingId = m['id'];
+                            break;
+                          }
+                        }
+
+                        if (meetingId != null && uid != null) {
+                          await FirebaseFirestore.instance
+                              .collection('courses')
+                              .doc(widget.courseId)
+                              .collection('meetings')
+                              .doc(meetingId)
+                              .collection('assignments')
+                              .doc(assignment['id'])
+                              .collection('submissions')
+                              .doc(uid)
+                              .set({
+                            'content': contentController.text.trim(),
+                            'submittedAt': FieldValue.serverTimestamp(),
+                            'studentName': name ?? 'Siswa',
+                            'studentId': uid,
+                          }, SetOptions(merge: true));
+
+                          if (mounted) {
+                            Navigator.pop(context);
+                            _fetchMeetings();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text("Tugas berhasil dikirim!")),
+                            );
+                          }
+                        }
+                      } catch (e) {
+                        debugPrint("Error submitting assignment: $e");
+                      } finally {
+                        if (mounted) setDialogState(() => isSaving = false);
+                      }
+                    },
+              child: isSaving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : Text(isSubmitted ? "Update" : "Kirim"),
+            ),
+          ],
+        ),
       ),
     );
   }

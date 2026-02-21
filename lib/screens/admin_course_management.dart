@@ -18,6 +18,60 @@ class _AdminCourseManagementScreenState
   String? _selectedMajorName;
   int? _selectedSemester;
 
+  late Stream<QuerySnapshot> _prodiStream;
+  late Stream<DocumentSnapshot> _majorDetailStream;
+  late Stream<QuerySnapshot> _courseStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _initStreams();
+  }
+
+  void _initStreams() {
+    _prodiStream = FirebaseFirestore.instance
+        .collection('majors')
+        .orderBy('name')
+        .snapshots();
+
+    if (_selectedMajorId != null) {
+      _majorDetailStream = FirebaseFirestore.instance
+          .collection('majors')
+          .doc(_selectedMajorId)
+          .snapshots();
+
+      _courseStream = FirebaseFirestore.instance
+          .collection('courses')
+          .where('category', isEqualTo: _selectedMajorName)
+          .where('semester', isEqualTo: _selectedSemester)
+          .snapshots();
+    }
+  }
+
+  void _updateMajorSelection(String id, String name) {
+    setState(() {
+      _selectedMajorId = id;
+      _selectedMajorName = name;
+      _selectedSemester = null;
+      _majorDetailStream =
+          FirebaseFirestore.instance.collection('majors').doc(id).snapshots();
+      // Course stream will be updated when semester is selected
+    });
+  }
+
+  void _updateSemesterSelection(int? semester) {
+    setState(() {
+      _selectedSemester = semester;
+      if (semester != null) {
+        _courseStream = FirebaseFirestore.instance
+            .collection('courses')
+            .where('category', isEqualTo: _selectedMajorName)
+            .where('semester', isEqualTo: semester)
+            .snapshots();
+      }
+    });
+  }
+
   TimeOfDay _calculateEndTime(TimeOfDay start, int sks) {
     int totalMinutes = start.hour * 60 + start.minute + (sks * 30);
     return TimeOfDay(
@@ -51,7 +105,6 @@ class _AdminCourseManagementScreenState
 
   void _showAddCourseDialog() {
     final titleController = TextEditingController();
-    final codeController = TextEditingController(); // Added codeController
     final locationController = TextEditingController();
     String? tempCategory = _selectedMajorName;
     int? selectedSemester = _selectedSemester;
@@ -78,13 +131,6 @@ class _AdminCourseManagementScreenState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildDialogFieldLabel("Informasi Umum"),
-                  TextField(
-                    controller: codeController,
-                    decoration: AppTheme.inputDecoration(context,
-                        "Kode Mata Kuliah (ex: CS101)", Icons.vpn_key_outlined),
-                    textCapitalization: TextCapitalization.characters,
-                  ),
-                  const SizedBox(height: 12),
                   TextField(
                     controller: titleController,
                     decoration: AppTheme.inputDecoration(
@@ -160,18 +206,25 @@ class _AdminCourseManagementScreenState
                   Row(
                     children: [
                       Expanded(
-                          child: _buildTimePicker(
-                              context,
-                              "Mulai",
-                              startTime,
-                              (t) => setDialogState(() {
-                                    startTime = t;
-                                    endTime = _calculateEndTime(t, selectedSKS);
-                                  }))),
+                        child: _buildTimePicker(
+                          context,
+                          "Mulai",
+                          startTime,
+                          (t) => setDialogState(() {
+                            startTime = t;
+                            endTime = _calculateEndTime(t, selectedSKS);
+                          }),
+                        ),
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
-                          child: _buildTimePicker(context, "Selesai", endTime,
-                              (t) => setDialogState(() => endTime = t))),
+                        child: _buildTimePicker(
+                          context,
+                          "Selesai",
+                          endTime,
+                          (t) => setDialogState(() => endTime = t),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -241,7 +294,14 @@ class _AdminCourseManagementScreenState
                         }
                       }
 
+                      // Safety check: ensure selectedTeacherId exists in teacherItems
+                      final safeValue = teacherItems
+                              .any((item) => item.value == selectedTeacherId)
+                          ? selectedTeacherId
+                          : null;
+
                       return DropdownButtonFormField<String>(
+                        value: safeValue,
                         decoration: AppTheme.inputDecoration(
                             context, "Guru", Icons.person_outlined),
                         items: teacherItems,
@@ -282,7 +342,6 @@ class _AdminCourseManagementScreenState
                   final docRef = await FirebaseFirestore.instance
                       .collection('courses')
                       .add({
-                    'courseCode': codeController.text.toUpperCase().trim(),
                     'title': titleController.text.trim(),
                     'location': locationController.text.trim(),
                     'category': tempCategory,
@@ -381,14 +440,16 @@ class _AdminCourseManagementScreenState
                     IconButton(
                       icon: const Icon(Icons.arrow_back_ios_new_rounded,
                           size: 18),
-                      onPressed: () => setState(() {
+                      onPressed: () {
                         if (_selectedSemester != null) {
-                          _selectedSemester = null;
+                          _updateSemesterSelection(null);
                         } else {
-                          _selectedMajorId = null;
-                          _selectedMajorName = null;
+                          setState(() {
+                            _selectedMajorId = null;
+                            _selectedMajorName = null;
+                          });
                         }
-                      }),
+                      },
                     ),
                     Expanded(
                       child: Text(
@@ -423,14 +484,16 @@ class _AdminCourseManagementScreenState
         leading: _selectedMajorId != null
             ? IconButton(
                 icon: const Icon(Icons.arrow_back),
-                onPressed: () => setState(() {
+                onPressed: () {
                   if (_selectedSemester != null) {
-                    _selectedSemester = null;
+                    _updateSemesterSelection(null);
                   } else {
-                    _selectedMajorId = null;
-                    _selectedMajorName = null;
+                    setState(() {
+                      _selectedMajorId = null;
+                      _selectedMajorName = null;
+                    });
                   }
-                }),
+                },
               )
             : null,
       ),
@@ -577,10 +640,7 @@ class _AdminCourseManagementScreenState
 
   Widget _buildProdiList() {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('majors')
-          .orderBy('name')
-          .snapshots(),
+      stream: _prodiStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -622,10 +682,7 @@ class _AdminCourseManagementScreenState
                 subtitle: Text(
                     "${(doc.data() as Map<String, dynamic>?)?['semesterCount'] ?? 8} Semester"),
                 trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => setState(() {
-                  _selectedMajorId = doc.id;
-                  _selectedMajorName = name;
-                }),
+                onTap: () => _updateMajorSelection(doc.id, name),
               ),
             );
           },
@@ -636,10 +693,7 @@ class _AdminCourseManagementScreenState
 
   Widget _buildSemesterList() {
     return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('majors')
-          .doc(_selectedMajorId)
-          .snapshots(),
+      stream: _majorDetailStream,
       builder: (context, snapshot) {
         int semesterCount = 8;
         if (snapshot.hasData && snapshot.data!.exists) {
@@ -659,7 +713,7 @@ class _AdminCourseManagementScreenState
           itemBuilder: (context, index) {
             final semester = index + 1;
             return InkWell(
-              onTap: () => setState(() => _selectedSemester = semester),
+              onTap: () => _updateSemesterSelection(semester),
               child: Container(
                 decoration: BoxDecoration(
                   color: Theme.of(context).cardColor,
@@ -742,11 +796,7 @@ class _AdminCourseManagementScreenState
 
   Widget _buildCourseList() {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('courses')
-          .where('category', isEqualTo: _selectedMajorName)
-          .where('semester', isEqualTo: _selectedSemester)
-          .snapshots(),
+      stream: _courseStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -855,25 +905,41 @@ class _AdminCourseManagementScreenState
                     ),
                     const SizedBox(height: 4),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Icon(
-                          course['teacherId'] == null
-                              ? Icons.warning_amber_rounded
-                              : Icons.person_outline_rounded,
-                          size: 14,
-                          color: course['teacherId'] == null
-                              ? Colors.red
-                              : AppTheme.primaryColor,
+                        Row(
+                          children: [
+                            Icon(
+                              course['teacherId'] == null
+                                  ? Icons.warning_amber_rounded
+                                  : Icons.person_outline_rounded,
+                              size: 14,
+                              color: course['teacherId'] == null
+                                  ? Colors.red
+                                  : AppTheme.primaryColor,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              "Guru: $teacher",
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: course['teacherId'] == null
+                                    ? Colors.red
+                                    : AppTheme.primaryColor,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 4),
                         Text(
-                          "Guru: $teacher",
+                          "Semester ${course['semester'] ?? '-'}",
                           style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: course['teacherId'] == null
-                                ? Colors.red
-                                : AppTheme.primaryColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.5),
                           ),
                         ),
                       ],

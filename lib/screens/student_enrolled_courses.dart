@@ -303,6 +303,15 @@ class _StudentEnrolledCoursesViewState
                       fontSize: 13,
                     ),
                   ),
+                  const Spacer(),
+                  Text(
+                    "Semester ${course['semester'] ?? '-'}",
+                    style: TextStyle(
+                      color: Colors.grey[500],
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
             ],

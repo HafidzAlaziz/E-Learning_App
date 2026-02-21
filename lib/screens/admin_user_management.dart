@@ -13,6 +13,29 @@ class AdminUserManagementScreen extends StatefulWidget {
 
 class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
   String _selectedRole = 'All';
+  late Stream<QuerySnapshot> _userStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _initStream();
+  }
+
+  void _initStream() {
+    _userStream = _selectedRole == 'All'
+        ? FirebaseFirestore.instance.collection('users').snapshots()
+        : FirebaseFirestore.instance
+            .collection('users')
+            .where('role', isEqualTo: _selectedRole)
+            .snapshots();
+  }
+
+  void _updateRoleFilter(String role) {
+    setState(() {
+      _selectedRole = role;
+      _initStream();
+    });
+  }
 
   void _deleteUser(String uid) async {
     final confirm = await showDialog<bool>(
@@ -109,7 +132,7 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
                             child: Text(r[0].toUpperCase() + r.substring(1))))
                         .toList(),
                     onChanged: (val) {
-                      if (val != null) setState(() => _selectedRole = val);
+                      if (val != null) _updateRoleFilter(val);
                     },
                   ),
                 ),
@@ -129,7 +152,7 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.filter_list_rounded),
-            onSelected: (val) => setState(() => _selectedRole = val),
+            onSelected: (val) => _updateRoleFilter(val),
             itemBuilder: (context) => ['All', 'admin', 'teacher', 'student']
                 .map((r) => PopupMenuItem<String>(
                     value: r, child: Text(r[0].toUpperCase() + r.substring(1))))
@@ -149,12 +172,7 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
         await Future.delayed(const Duration(milliseconds: 500));
       },
       child: StreamBuilder<QuerySnapshot>(
-        stream: _selectedRole == 'All'
-            ? FirebaseFirestore.instance.collection('users').snapshots()
-            : FirebaseFirestore.instance
-                .collection('users')
-                .where('role', isEqualTo: _selectedRole)
-                .snapshots(),
+        stream: _userStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());

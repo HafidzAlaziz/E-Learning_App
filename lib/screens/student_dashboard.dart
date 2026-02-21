@@ -302,7 +302,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
 
           // Real-time Attendance Notification (Floating)
           Positioned(
-            bottom: 20,
+            top: 16,
             left: 20,
             right: 20,
             child: StreamBuilder<QuerySnapshot>(
@@ -333,67 +333,100 @@ class _StudentDashboardState extends State<StudentDashboard> {
                     _enrolledCourseNames[session['courseId']] ??
                     'Mata Kuliah';
 
-                return Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade600,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.green.withValues(alpha: 0.3),
-                        blurRadius: 15,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.qr_code_scanner, color: Colors.white),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "Absensi Telah Dibuka!",
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13),
-                            ),
-                            Text(
-                              "Matkul $courseName",
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                return StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('attendance')
+                        .where('meetingId', isEqualTo: activeSessions.first.id)
+                        .where('studentId',
+                            isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+                        .snapshots(),
+                    builder: (context, attendanceCheckSnap) {
+                      final hasAttended = attendanceCheckSnap.hasData &&
+                          attendanceCheckSnap.data!.docs.isNotEmpty;
+
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: hasAttended
+                              ? Colors.blue.shade600
+                              : Colors.green.shade600,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: (hasAttended ? Colors.blue : Colors.green)
+                                  .withValues(alpha: 0.3),
+                              blurRadius: 15,
+                              offset: const Offset(0, 6),
                             ),
                           ],
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/student-scanner');
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.green.shade700,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
+                        child: Row(
+                          children: [
+                            Icon(
+                                hasAttended
+                                    ? Icons.check_circle
+                                    : Icons.qr_code_scanner,
+                                color: Colors.white),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    hasAttended
+                                        ? "Anda Sudah Absen"
+                                        : "Absensi Telah Dibuka!",
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13),
+                                  ),
+                                  Text(
+                                    "Matkul $courseName",
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            if (!hasAttended)
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.pushNamed(
+                                      context, '/student-scanner');
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: Colors.green.shade700,
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: const Text("Scan Now",
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold)),
+                              )
+                            else
+                              const Text(
+                                "Berhasil",
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13),
+                              ),
+                          ],
                         ),
-                        child: const Text("Scan Now",
-                            style: TextStyle(
-                                fontSize: 12, fontWeight: FontWeight.bold)),
-                      ),
-                    ],
-                  ),
-                );
+                      );
+                    });
               },
             ),
           ),

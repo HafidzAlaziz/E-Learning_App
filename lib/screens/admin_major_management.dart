@@ -13,6 +13,16 @@ class AdminMajorManagementScreen extends StatefulWidget {
 class _AdminMajorManagementScreenState
     extends State<AdminMajorManagementScreen> {
   final TextEditingController _majorController = TextEditingController();
+  late Stream<QuerySnapshot> _majorStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _majorStream = FirebaseFirestore.instance
+        .collection('majors')
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+  }
 
   void _showAddMajorDialog() {
     showDialog(
@@ -84,10 +94,7 @@ class _AdminMajorManagementScreenState
             style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('majors')
-            .orderBy('createdAt', descending: true)
-            .snapshots(),
+        stream: _majorStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());

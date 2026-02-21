@@ -332,6 +332,17 @@ class _StudentKrsViewState extends State<StudentKrsView> {
                                           .withValues(alpha: 0.7),
                                       fontSize: 11),
                                 ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  "Semester ${course['semester'] ?? '-'}",
+                                  style: TextStyle(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant
+                                          .withValues(alpha: 0.5),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600),
+                                ),
                               ],
                             ),
                           ),

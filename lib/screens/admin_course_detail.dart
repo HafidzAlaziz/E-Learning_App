@@ -55,8 +55,6 @@ class AdminCourseDetailScreen extends StatelessWidget {
 
   void _showEditCourseDialog(BuildContext context, Map<String, dynamic> data) {
     final titleController = TextEditingController(text: data['title']);
-    final codeController =
-        TextEditingController(text: data['courseCode']); // Added codeController
     final locationController = TextEditingController(text: data['location']);
     int selectedSKS = data['sks'] ?? 3;
     String selectedDay = data['day'] ?? 'Senin';
@@ -96,12 +94,6 @@ class AdminCourseDetailScreen extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  TextField(
-                    controller: codeController,
-                    decoration: AppTheme.inputDecoration(
-                        context, "Kode Mata Kuliah", Icons.vpn_key_outlined),
-                    textCapitalization: TextCapitalization.characters,
-                  ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: titleController,
@@ -221,9 +213,15 @@ class AdminCourseDetailScreen extends StatelessWidget {
                                   style: const TextStyle(fontSize: 13))));
                         }
                       }
+                      // Safety check: ensure selectedTeacherId exists in teacherItems
+                      final safeInitialValue = teacherItems
+                              .any((item) => item.value == selectedTeacherId)
+                          ? selectedTeacherId
+                          : null;
+
                       return DropdownButtonFormField<String>(
                         isExpanded: true,
-                        initialValue: selectedTeacherId,
+                        initialValue: safeInitialValue,
                         decoration: AppTheme.inputDecoration(
                             context, "Guru Pengajar", Icons.person_rounded),
                         items: teacherItems,
@@ -263,7 +261,6 @@ class AdminCourseDetailScreen extends StatelessWidget {
                       .collection('courses')
                       .doc(courseId)
                       .update({
-                    'courseCode': codeController.text.toUpperCase().trim(),
                     'title': titleController.text.trim(),
                     'location': locationController.text.trim(),
                     'category': tempCategory,
@@ -415,8 +412,7 @@ class AdminCourseDetailScreen extends StatelessWidget {
                             color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: Text(
-                              "$category | $courseCode", // Added courseCode to badge
+                          child: Text(category,
                               style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,

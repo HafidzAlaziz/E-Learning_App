@@ -88,18 +88,28 @@ class _StudentScannerScreenState extends State<StudentScannerScreen> {
         try {
           final qrTime = DateTime.parse(data['timestamp']);
           final now = DateTime.now();
-          // Allow 60 seconds validity
           if (now.difference(qrTime).inSeconds > 60) {
-            _showErrorDialog("Barcode telah expired");
+            _showErrorDialog(
+                "Kode QR ini telah kadaluarsa. Silakan scan kode yang baru di layar Guru.");
             return;
           }
         } catch (e) {
-          debugPrint("Error parsing timestamp: $e");
-          // Fallback if timestamp is invalid or missing -> proceed or fail?
-          // Let's fail safe if we can't validate
-          _showErrorDialog("Format QR Code tidak valid");
+          _showErrorDialog("Format QR Code tidak valid.");
           return;
         }
+      }
+
+      // Check for duplicate attendance FIRST
+      final existing = await FirebaseFirestore.instance
+          .collection('attendance')
+          .where('meetingId', isEqualTo: data['meetingId'])
+          .where('studentId', isEqualTo: uid)
+          .get();
+
+      if (existing.docs.isNotEmpty) {
+        _showErrorDialog(
+            "Anda sudah melakukan absensi untuk pertemuan ini. Silakan kembali ke dashboard.");
+        return;
       }
 
       // 2. Validate Session Status
@@ -111,35 +121,25 @@ class _StudentScannerScreenState extends State<StudentScannerScreen> {
           .get();
 
       if (!meetingDoc.exists) {
-        _showErrorDialog("Pertemuan tidak ditemukan");
+        _showErrorDialog("Pertemuan tidak ditemukan.");
         return;
       }
 
-      if (meetingDoc.data()?['isCompleted'] == true) {
-        _showErrorDialog("Absen barcode ini telah ditutup");
+      if (meetingDoc.data()?['isAttendanceActive'] == false) {
+        _showErrorDialog(
+            "Absensi untuk pertemuan ini telah ditutup oleh Guru.");
         return;
       }
 
-      // Check if already attended for this meeting to prevent duplicates
-      final existing = await FirebaseFirestore.instance
-          .collection('attendance')
-          .where('meetingId', isEqualTo: data['meetingId'])
-          .where('studentId', isEqualTo: uid)
-          .get();
-
-      if (existing.docs.isEmpty) {
-        await FirebaseFirestore.instance.collection('attendance').add({
-          'courseId': data['courseId'],
-          'meetingId': data['meetingId'],
-          'studentId': uid,
-          'timestamp': FieldValue.serverTimestamp(),
-          'studentName':
-              FirebaseAuth.instance.currentUser?.displayName ?? 'Student',
-        });
-      } else {
-        _showErrorDialog("Anda sudah melakukan absensi untuk pertemuan ini");
-        return;
-      }
+      // Record attendance
+      await FirebaseFirestore.instance.collection('attendance').add({
+        'courseId': data['courseId'],
+        'meetingId': data['meetingId'],
+        'studentId': uid,
+        'timestamp': FieldValue.serverTimestamp(),
+        'studentName':
+            FirebaseAuth.instance.currentUser?.displayName ?? 'Student',
+      });
 
       if (!mounted) return;
 
@@ -147,23 +147,40 @@ class _StudentScannerScreenState extends State<StudentScannerScreen> {
         context: context,
         barrierDismissible: false,
         builder: (context) => AlertDialog(
-          title: const Text("Absensi Berhasil"),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green),
+              SizedBox(width: 8),
+              Text("Absensi Berhasil"),
+            ],
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text("Data Anda telah tercatat ke sistem."),
               const SizedBox(height: 12),
-              Text("Waktu: ${DateTime.now().toString().split('.')[0]}"),
+              Text(
+                "Waktu: ${DateTime.now().toString().split('.')[0]}",
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
             ],
           ),
           actions: [
-            TextButton(
+            ElevatedButton(
               onPressed: () {
                 Navigator.pop(context); // Close dialog
                 Navigator.pop(context); // Close scanner
               },
-              child: const Text("Tutup"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text("Selesai"),
             ),
           ],
         ),

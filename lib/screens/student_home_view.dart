@@ -736,45 +736,61 @@ class _StudentHomeViewState extends State<StudentHomeView>
                   ),
                 ),
                 const SizedBox(height: 32),
-                // 1.1 Next Class Pill (Solid Orange/Amber with Animated Bell)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFF8F00), // Solid Amber/Orange
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Animated Bell Icon
-                      AnimatedBuilder(
-                        animation: _bellAnimationController,
-                        builder: (context, child) {
-                          return Transform.rotate(
-                            angle: _bellAnimationController.value * 0.2 - 0.1,
-                            child: const Icon(
-                              Icons.notifications_active_rounded,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(width: 12),
-                      Flexible(
-                        child: Text(
-                          _nextClassMessage,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                GestureDetector(
+                  onTap: () {
+                    if (_nextClassDoc != null) {
+                      final data =
+                          _nextClassDoc!.data() as Map<String, dynamic>;
+                      _navigateToTodayMeeting(
+                          _nextClassDoc!.id, data['title'] ?? '');
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF8F00), // Solid Amber/Orange
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFFF8F00).withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Animated Bell Icon
+                        AnimatedBuilder(
+                          animation: _bellAnimationController,
+                          builder: (context, child) {
+                            return Transform.rotate(
+                              angle: _bellAnimationController.value * 0.2 - 0.1,
+                              child: const Icon(
+                                Icons.notifications_active_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 12),
+                        Flexible(
+                          child: Text(
+                            _nextClassMessage,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],

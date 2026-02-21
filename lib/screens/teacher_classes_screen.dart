@@ -150,6 +150,15 @@ class TeacherClassesScreen extends StatelessWidget {
                                 fontSize: 13,
                               ),
                             ),
+                            const Spacer(),
+                            Text(
+                              "Semester ${data['semester'] ?? '-'}",
+                              style: TextStyle(
+                                color: Colors.grey.shade500,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ],
                         ),
                       ],

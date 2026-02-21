@@ -21,11 +21,12 @@ class AdminDashboard extends StatefulWidget {
 }
 
 class _AdminDashboardState extends State<AdminDashboard> {
-  late Timer _timer;
-  late DateTime _currentTime;
-  late DateTime _calendarFocusedDay;
-
+  DateTime _calendarFocusedDay = DateTime.now();
   int _currentIndex = 0;
+
+  late Stream<QuerySnapshot> _userCountStream;
+  late Stream<QuerySnapshot> _majorCountStream;
+  late Stream<QuerySnapshot> _academicEventsStream;
 
   final List<String> _titles = [
     "E-Learning (Admin)",
@@ -38,15 +39,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
   @override
   void initState() {
     super.initState();
-    _currentTime = DateTime.now();
-    _calendarFocusedDay = _currentTime;
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted) {
-        setState(() {
-          _currentTime = DateTime.now();
-        });
-      }
-    });
+    _initStreams();
+  }
+
+  void _initStreams() {
+    _userCountStream =
+        FirebaseFirestore.instance.collection('users').snapshots();
+    _majorCountStream =
+        FirebaseFirestore.instance.collection('majors').snapshots();
+    _academicEventsStream =
+        FirebaseFirestore.instance.collection('academic_events').snapshots();
   }
 
   void _onItemTapped(int index) {
@@ -60,13 +62,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
       case 0:
         return _buildHomeView();
       case 1:
-        return AdminUserManagementScreen(isView: true);
+        return const AdminUserManagementScreen(isView: true);
       case 2:
-        return AdminCourseManagementScreen(isView: true);
+        return const AdminCourseManagementScreen(isView: true);
       case 3:
-        return ProfileSettingsView();
+        return const ProfileSettingsView();
       case 4:
-        return StudentCalendarView();
+        return const StudentCalendarView();
       default:
         return const Center(child: Text("Halaman tidak ditemukan"));
     }
@@ -74,7 +76,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   @override
   void dispose() {
-    _timer.cancel();
     super.dispose();
   }
 
@@ -327,9 +328,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget _buildHomeView() {
     return RefreshIndicator(
       onRefresh: () async {
-        setState(() {
-          _currentTime = DateTime.now();
-        });
+        setState(() {});
         await Future.delayed(const Duration(milliseconds: 500));
       },
       child: SingleChildScrollView(
@@ -351,9 +350,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               children: [
                 Expanded(
                   child: StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('users')
-                        .snapshots(),
+                    stream: _userCountStream,
                     builder: (context, snapshot) {
                       String totalUsers = "...";
                       if (snapshot.hasData) {
@@ -373,9 +370,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('majors')
-                        .snapshots(),
+                    stream: _majorCountStream,
                     builder: (context, snapshot) {
                       String totalMajors = "...";
                       if (snapshot.hasData) {
@@ -403,49 +398,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildClockAndCalendar() {
-    String formattedTime = DateFormat('HH:mm:ss').format(_currentTime);
-
     return Column(
       children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              const Text(
-                "Jam Digital",
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.primaryColor,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              const SizedBox(height: 12),
-              const SizedBox(height: 8),
-              Text(
-                formattedTime,
-                style: const TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primaryColor,
-                  letterSpacing: 2,
-                ),
-              ),
-            ],
-          ),
-        ),
+        const DigitalClockWidget(),
         const SizedBox(height: 16),
         Container(
           width: double.infinity,
@@ -463,9 +418,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('academic_events')
-                    .snapshots(),
+                stream: _academicEventsStream,
                 builder: (context, snapshot) {
                   final Map<DateTime, List> eventsMap = {};
                   if (snapshot.hasData) {
@@ -502,9 +455,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     lastDay: DateTime.utc(2030, 12, 31),
                     focusedDay: _calendarFocusedDay,
                     onPageChanged: (focusedDay) {
-                      _calendarFocusedDay = focusedDay;
+                      setState(() {
+                        _calendarFocusedDay = focusedDay;
+                      });
                     },
-                    currentDay: _currentTime,
+                    currentDay: DateTime.now(),
                     headerStyle: const HeaderStyle(
                       formatButtonVisible: false,
                       titleCentered: true,
@@ -643,6 +598,81 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class DigitalClockWidget extends StatefulWidget {
+  const DigitalClockWidget({super.key});
+
+  @override
+  State<DigitalClockWidget> createState() => _DigitalClockWidgetState();
+}
+
+class _DigitalClockWidgetState extends State<DigitalClockWidget> {
+  late Timer _timer;
+  late DateTime _currentTime;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentTime = DateTime.now();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          _currentTime = DateTime.now();
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    String formattedTime = DateFormat('HH:mm:ss').format(_currentTime);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          const Text(
+            "Jam Digital",
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.primaryColor,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            formattedTime,
+            style: const TextStyle(
+              fontSize: 36,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.primaryColor,
+              letterSpacing: 2,
+            ),
+          ),
+        ],
       ),
     );
   }

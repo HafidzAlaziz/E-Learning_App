@@ -174,20 +174,102 @@ class _TeacherAttendanceQrScreenState extends State<TeacherAttendanceQrScreen> {
                   ),
                 ),
                 const SizedBox(height: 48),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.people_outline,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant),
-                    const SizedBox(width: 8),
-                    Text(
-                      "3 Siswa Terdaftar | 1 Telah Absen",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w500,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                  ],
+                // Real-time student tracking
+                StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('enrollments')
+                      .where('courseId', isEqualTo: args!['courseId'])
+                      .snapshots(),
+                  builder: (context, enrollmentSnap) {
+                    final totalStudents = enrollmentSnap.data?.docs.length ?? 0;
+
+                    return StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection('attendance')
+                            .where('meetingId', isEqualTo: args!['meetingId'])
+                            .snapshots(),
+                        builder: (context, attendanceSnap) {
+                          final attendedStudents =
+                              attendanceSnap.data?.docs.length ?? 0;
+                          final recentScans = attendanceSnap.data?.docs ?? [];
+
+                          // Sort by timestamp descending
+                          final sortedScans = List.from(recentScans);
+                          sortedScans.sort((a, b) {
+                            final ta =
+                                (a.data() as Map<String, dynamic>)['timestamp']
+                                    as Timestamp?;
+                            final tb =
+                                (b.data() as Map<String, dynamic>)['timestamp']
+                                    as Timestamp?;
+                            if (ta == null || tb == null) return 0;
+                            return tb.compareTo(ta);
+                          });
+
+                          return Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.people_outline,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    "$totalStudents Siswa Terdaftar | $attendedStudents Telah Absen",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (sortedScans.isNotEmpty) ...[
+                                const SizedBox(height: 24),
+                                Text(
+                                  "Baru saja masuk:",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey.shade500,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                SizedBox(
+                                  height: 100,
+                                  child: ListView.builder(
+                                    shrinkWrap: true,
+                                    itemCount: sortedScans.length > 5
+                                        ? 5
+                                        : sortedScans.length,
+                                    itemBuilder: (context, index) {
+                                      final data = sortedScans[index].data()
+                                          as Map<String, dynamic>;
+                                      return Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 2),
+                                        child: Center(
+                                          child: Text(
+                                            data['studentName'] ?? 'Siswa',
+                                            style: const TextStyle(
+                                              color: Colors.green,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ],
+                          );
+                        });
+                  },
                 ),
               ],
             ),

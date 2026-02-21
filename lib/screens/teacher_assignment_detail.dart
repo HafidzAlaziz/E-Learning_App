@@ -319,28 +319,74 @@ class _TeacherAssignmentDetailScreenState
         TextEditingController(text: submission['grade']?.toString() ?? "");
     final feedbackController =
         TextEditingController(text: submission['feedback'] ?? "");
+    final String content =
+        submission['content'] ?? "Tidak ada lampiran teks/link.";
+    final bool isLink = content.startsWith('http');
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Beri Nilai"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: gradeController,
-              keyboardType: TextInputType.number,
-              decoration: AppTheme.inputDecoration(
-                  context, "Nilai (0-100)", Icons.score),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: feedbackController,
-              maxLines: 3,
-              decoration: AppTheme.inputDecoration(
-                  context, "Feedback (Opsional)", Icons.comment),
-            ),
-          ],
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text("Jawaban Siswa:",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(content, style: const TextStyle(fontSize: 13)),
+                    if (isLink) ...[
+                      const SizedBox(height: 8),
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          final Uri url = Uri.parse(content);
+                          if (await canLaunchUrl(url)) {
+                            await launchUrl(url,
+                                mode: LaunchMode.externalApplication);
+                          }
+                        },
+                        icon: const Icon(Icons.open_in_new, size: 16),
+                        label: const Text("Buka Link"),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 0),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Divider(),
+              const SizedBox(height: 12),
+              TextField(
+                controller: gradeController,
+                keyboardType: TextInputType.number,
+                decoration: AppTheme.inputDecoration(
+                    context, "Nilai (0-100)", Icons.score),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: feedbackController,
+                maxLines: 2,
+                decoration: AppTheme.inputDecoration(
+                    context, "Feedback (Opsional)", Icons.comment),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -348,7 +394,9 @@ class _TeacherAssignmentDetailScreenState
               child: const Text("Batal")),
           ElevatedButton(
             onPressed: () async {
-              final grade = double.tryParse(gradeController.text);
+              final gradeStr = gradeController.text.trim();
+              if (gradeStr.isEmpty) return;
+              final grade = double.tryParse(gradeStr);
               if (grade == null) return;
 
               await FirebaseFirestore.instance
@@ -362,7 +410,7 @@ class _TeacherAssignmentDetailScreenState
                   .doc(studentId)
                   .update({
                 'grade': grade,
-                'feedback': feedbackController.text,
+                'feedback': feedbackController.text.trim(),
                 'gradedAt': FieldValue.serverTimestamp(),
               });
 
