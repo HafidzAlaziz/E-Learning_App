@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:e_learning_app/core/theme.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:e_learning_app/screens/teacher_attendance_qr.dart';
 import 'package:e_learning_app/screens/teacher_assignment_detail.dart';
 
@@ -58,6 +59,25 @@ class _TeacherClassDetailScreenState extends State<TeacherClassDetailScreen> {
     } catch (e) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text("Error: $e")));
+    }
+  }
+
+  Future<void> _launchURL(String urlString) async {
+    final Uri url = Uri.parse(urlString);
+    try {
+      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not launch URL')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
     }
   }
 
@@ -977,16 +997,21 @@ class _TeacherClassDetailScreenState extends State<TeacherClassDetailScreen> {
                       children: snapshot.data!.docs.map((doc) {
                         final mData = doc.data() as Map<String, dynamic>;
                         return ListTile(
+                          onTap: () {
+                            if (mData['url'] != null) {
+                              _launchURL(mData['url']);
+                            }
+                          },
                           contentPadding: EdgeInsets.zero,
                           dense: true,
-                          leading: const Icon(Icons.link,
-                              color: AppTheme.primaryColor),
+                          leading:
+                              const Icon(Icons.link, color: Colors.blue),
                           title: Text(mData['name'] ?? 'Materi'),
-                          subtitle: Text(mData['url'] ?? '-',
-                              maxLines: 1, overflow: TextOverflow.ellipsis),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              const Icon(Icons.open_in_new,
+                                  size: 14, color: Colors.blue),
                               IconButton(
                                 icon: const Icon(Icons.edit_outlined,
                                     size: 18, color: Colors.blue),
@@ -1093,11 +1118,41 @@ class _TeacherClassDetailScreenState extends State<TeacherClassDetailScreen> {
                               ),
                             ],
                           ),
-                          subtitle: Text(
-                            "Deadline: $deadlineStr\n${aData['description'] ?? '-'}",
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 12),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Deadline: $deadlineStr\n${aData['description'] ?? '-'}",
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                              if (aData['description'] != null &&
+                                  aData['description']
+                                      .toString()
+                                      .contains('http')) ...[
+                                const SizedBox(height: 4),
+                                InkWell(
+                                  onTap: () {
+                                    final desc = aData['description'] as String;
+                                    final words = desc.split(RegExp(r'\s+'));
+                                    final url = words.firstWhere(
+                                        (w) => w.startsWith('http'),
+                                        orElse: () => "");
+                                    if (url.isNotEmpty) _launchURL(url);
+                                  },
+                                  child: const Text(
+                                    "Buka Link Deskripsi",
+                                    style: TextStyle(
+                                      color: Colors.blue,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                           onTap: () {
                             Navigator.push(

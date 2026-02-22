@@ -736,6 +736,10 @@ class _TeacherDashboardState extends State<TeacherDashboard>
                     if (!myCourseIds.contains(courseIdInPath)) continue;
 
                     final data = doc.data() as Map<String, dynamic>;
+                    
+                    // Skip if already graded to avoid clutter
+                    if (data['grade'] != null) continue;
+
                     final submittedAtTs = data['submittedAt'] as Timestamp?;
                     if (submittedAtTs == null) continue;
                     final submittedAt = submittedAtTs.toDate();
@@ -765,6 +769,7 @@ class _TeacherDashboardState extends State<TeacherDashboard>
                                 'description':
                                     data['assignmentDescription'] ?? '',
                               },
+                              'initialTab': 1, // Open "Sudah Mengumpulkan" tab
                             },
                           ),
                     });

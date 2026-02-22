@@ -507,6 +507,26 @@ class _StudentCourseDetailScreenState extends State<StudentCourseDetailScreen> {
               Text(
                   "Feedback: ${submission['feedback'] ?? 'Tidak ada feedback'}",
                   style: TextStyle(color: Colors.grey[700])),
+              if (submission['content'] != null &&
+                  submission['content'].toString().contains('http')) ...[
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 8),
+                const Text("Jawaban Anda (Link):",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    final content = submission['content'] as String;
+                    final words = content.split(RegExp(r'\s+'));
+                    final url = words.firstWhere((w) => w.startsWith('http'),
+                        orElse: () => "");
+                    if (url.isNotEmpty) _launchURL(url);
+                  },
+                  icon: const Icon(Icons.open_in_new, size: 16),
+                  label: const Text("Lihat Jawaban Saya"),
+                ),
+              ],
             ],
           ),
           actions: [
@@ -546,6 +566,39 @@ class _StudentCourseDetailScreenState extends State<StudentCourseDetailScreen> {
                 decoration: AppTheme.inputDecoration(
                     context, "Link atau Jawaban Teks", Icons.link),
               ),
+              if (assignment['description'] != null &&
+                  assignment['description'].toString().contains('http')) ...[
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: () {
+                    final desc = assignment['description'] as String;
+                    final words = desc.split(RegExp(r'\s+'));
+                    final url = words.firstWhere((w) => w.startsWith('http'),
+                        orElse: () => "");
+                    if (url.isNotEmpty) _launchURL(url);
+                  },
+                  icon: const Icon(Icons.attachment, size: 16),
+                  label: const Text("Buka Link di Deskripsi",
+                      style: TextStyle(fontSize: 12)),
+                ),
+              ],
+              if (isSubmitted &&
+                  submission['content'] != null &&
+                  submission['content'].toString().contains('http')) ...[
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: () {
+                    final content = submission['content'] as String;
+                    final words = content.split(RegExp(r'\s+'));
+                    final url = words.firstWhere((w) => w.startsWith('http'),
+                        orElse: () => "");
+                    if (url.isNotEmpty) _launchURL(url);
+                  },
+                  icon: const Icon(Icons.assignment_turned_in, size: 16),
+                  label: const Text("Cek Link Jawaban Saya",
+                      style: TextStyle(fontSize: 12, color: Colors.green)),
+                ),
+              ],
             ],
           ),
           actions: [

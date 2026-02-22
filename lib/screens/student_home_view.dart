@@ -24,6 +24,7 @@ class _StudentHomeViewState extends State<StudentHomeView>
   int _totalSks = 0;
   double _ipk = 0.0;
   double _ips = 0.0;
+  int _latestSemester = 1;
   String _major = "Mencari data...";
   String _currentTime = "";
   String _currentDate = "";
@@ -457,12 +458,114 @@ class _StudentHomeViewState extends State<StudentHomeView>
         totalSksCalc += sks;
       }));
 
+      // Separate IPK (all semesters) and IPS (latest semester only)
+      // Build a map of courseId -> semester
+      final Map<String, int> courseSemesterMap = {};
+      for (var doc in coursesSnap.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        courseSemesterMap[doc.id] =
+            (data['semester'] as num?)?.toInt() ?? 1;
+      }
+
+      // Find the latest semester
+      int latestSem = 1;
+      if (courseSemesterMap.isNotEmpty) {
+        latestSem = courseSemesterMap.values
+            .reduce((a, b) => a > b ? a : b);
+      }
+
+      // IPS = only courses in latest semester
+      double ipsPoints = 0;
+      int ipsSks = 0;
+      double ipkPoints = 0;
+      int ipkSks = 0;
+
+      // Re-calculate with semester split
+      // We'll re-use collected per-course data from the parallel loop above
+      // (totalPoints / totalSksCalc is IPK, already calculated above)
+      // For IPS we do a lightweight re-scan of courseSemesterMap
+      // Since we aggregated into totalPoints/totalSksCalc, we need to
+      // accumulate separately per-semester. Use a fresh pass:
+      final Map<String, double> courseGrades = {};
+      final Map<String, int> courseSks = {};
+
+      for (var doc in coursesSnap.docs) {
+        final cData = doc.data() as Map<String, dynamic>;
+        final cSks = (cData['sks'] as num? ?? 0).toInt();
+        courseSks[doc.id] = cSks;
+
+        // Find final grade for this course from submissions
+        Map<String, double> scheme = {
+          'attendance': 10.0, 'assignment': 20.0,
+          'quiz': 20.0, 'uts': 25.0, 'uas': 25.0,
+        };
+        if (cData.containsKey('gradingScheme')) {
+          final s = cData['gradingScheme'] as Map<String, dynamic>;
+          scheme = s.map((k, v) => MapEntry(k, (v as num).toDouble()));
+        }
+
+        // Attendance
+        final attSnap = await FirebaseFirestore.instance
+            .collection('attendance')
+            .where('courseId', isEqualTo: doc.id)
+            .where('studentId', isEqualTo: uid)
+            .get();
+        final meetSnap = await FirebaseFirestore.instance
+            .collection('courses')
+            .doc(doc.id)
+            .collection('meetings')
+            .get();
+        final pct = meetSnap.docs.isNotEmpty
+            ? (attSnap.docs.length / meetSnap.docs.length * 100).clamp(0.0, 100.0)
+            : 0.0;
+
+        Map<String, List<double>> sc = {
+          'assignment': [], 'quiz': [], 'uts': [], 'uas': []
+        };
+        for (var sub in allSubmissionsSnap.docs) {
+          if (!sub.reference.path.contains('courses/${doc.id}')) continue;
+          final sd = sub.data() as Map<String, dynamic>;
+          if (sd['grade'] == null) continue;
+          final ar = sub.reference.parent.parent;
+          if (ar == null) continue;
+          final ad = await ar.get();
+          final cat = (ad.data() as Map<String, dynamic>?)?['category'] ?? 'assignment';
+          if (sc.containsKey(cat)) sc[cat]!.add((sd['grade'] as num).toDouble());
+        }
+
+        double avg(String k) {
+          final l = sc[k];
+          return (l == null || l.isEmpty) ? 0.0 : l.reduce((a,b)=>a+b)/l.length;
+        }
+
+        final fg =
+            (pct * scheme['attendance']! / 100) +
+            (avg('assignment') * scheme['assignment']! / 100) +
+            (avg('quiz') * scheme['quiz']! / 100) +
+            (avg('uts') * scheme['uts']! / 100) +
+            (avg('uas') * scheme['uas']! / 100);
+
+        double mutu = 0.0;
+        if (fg >= 85) mutu = 4.0;
+        else if (fg >= 75) mutu = 3.0;
+        else if (fg >= 65) mutu = 2.0;
+        else if (fg >= 50) mutu = 1.0;
+
+        courseGrades[doc.id] = mutu;
+        ipkPoints += mutu * cSks;
+        ipkSks += cSks;
+
+        if ((courseSemesterMap[doc.id] ?? 1) == latestSem) {
+          ipsPoints += mutu * cSks;
+          ipsSks += cSks;
+        }
+      }
+
       if (mounted) {
         setState(() {
-          double calculated =
-              totalSksCalc > 0 ? totalPoints / totalSksCalc : 0.0;
-          _ipk = calculated;
-          _ips = calculated;
+          _ipk = ipkSks > 0 ? ipkPoints / ipkSks : 0.0;
+          _ips = ipsSks > 0 ? ipsPoints / ipsSks : 0.0;
+          _latestSemester = latestSem;
         });
       }
     } catch (e) {
@@ -847,7 +950,7 @@ class _StudentHomeViewState extends State<StudentHomeView>
                       child: _buildStatCard(
                         icon: Icons.trending_up_rounded,
                         value: _ips.toStringAsFixed(2),
-                        label: "IPS Semester",
+                        label: "IPS Sem. $_latestSemester",
                         badge: "IPS",
                         color: Colors.orange,
                       ),

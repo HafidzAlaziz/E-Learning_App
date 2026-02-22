@@ -111,6 +111,7 @@ class MyApp extends StatelessWidget {
                     meetingId: args['meetingId'],
                     assignmentId: args['assignmentId'],
                     assignmentData: args['assignmentData'],
+                    initialTab: args['initialTab'] ?? 0,
                   );
                 },
               },

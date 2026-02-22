@@ -9,6 +9,7 @@ class TeacherAssignmentDetailScreen extends StatefulWidget {
   final String meetingId;
   final String assignmentId;
   final Map<String, dynamic> assignmentData;
+  final int initialTab;
 
   const TeacherAssignmentDetailScreen({
     super.key,
@@ -16,6 +17,7 @@ class TeacherAssignmentDetailScreen extends StatefulWidget {
     required this.meetingId,
     required this.assignmentId,
     required this.assignmentData,
+    this.initialTab = 0,
   });
 
   @override
@@ -119,6 +121,7 @@ class _TeacherAssignmentDetailScreenState
 
     return DefaultTabController(
       length: 2,
+      initialIndex: widget.initialTab,
       child: Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
