@@ -63,7 +63,15 @@ class _TeacherClassDetailScreenState extends State<TeacherClassDetailScreen> {
   }
 
   Future<void> _launchURL(String urlString) async {
-    final Uri url = Uri.parse(urlString);
+    if (urlString.trim().isEmpty) return;
+
+    String formattedUrl = urlString.trim();
+    if (!formattedUrl.startsWith('http://') &&
+        !formattedUrl.startsWith('https://')) {
+      formattedUrl = 'https://$formattedUrl';
+    }
+
+    final Uri url = Uri.parse(formattedUrl);
     try {
       if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
         if (mounted) {
@@ -75,7 +83,8 @@ class _TeacherClassDetailScreenState extends State<TeacherClassDetailScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(
+              content: Text('Gagal membuka link. Pastikan format link benar.')),
         );
       }
     }
@@ -319,12 +328,15 @@ class _TeacherClassDetailScreenState extends State<TeacherClassDetailScreen> {
         TextEditingController(text: initialData?['title'] ?? '');
     final descController =
         TextEditingController(text: initialData?['description'] ?? '');
+    final urlController =
+        TextEditingController(text: initialData?['url'] ?? '');
 
     DateTime selectedDeadline = DateTime.now().add(const Duration(days: 7));
     if (initialData != null && initialData['deadline'] != null) {
-    if (initialData['deadline'] != null && initialData['deadline'] is Timestamp) {
-      selectedDeadline = (initialData['deadline'] as Timestamp).toDate();
-    }
+      if (initialData['deadline'] != null &&
+          initialData['deadline'] is Timestamp) {
+        selectedDeadline = (initialData['deadline'] as Timestamp).toDate();
+      }
     }
 
     String selectedCategory = initialData?['category'] ?? 'assignment';
@@ -394,6 +406,15 @@ class _TeacherClassDetailScreenState extends State<TeacherClassDetailScreen> {
                   onChanged: (_) => setDialogState(() {}),
                   maxLines: 2,
                 ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: urlController,
+                  decoration: AppTheme.inputDecoration(
+                    context,
+                    "Link Tambahan (Opsional)",
+                    Icons.link,
+                  ),
+                ),
                 const SizedBox(height: 16),
                 InkWell(
                   onTap: () async {
@@ -462,7 +483,9 @@ class _TeacherClassDetailScreenState extends State<TeacherClassDetailScreen> {
                   final data = {
                     'title': titleController.text,
                     'description': descController.text,
+                    'url': urlController.text.trim(),
                     'category': selectedCategory,
+
                     'deadline': Timestamp.fromDate(selectedDeadline),
                     'courseId':
                         widget.courseId, // Added for cross-course querying
@@ -1004,8 +1027,7 @@ class _TeacherClassDetailScreenState extends State<TeacherClassDetailScreen> {
                           },
                           contentPadding: EdgeInsets.zero,
                           dense: true,
-                          leading:
-                              const Icon(Icons.link, color: Colors.blue),
+                          leading: const Icon(Icons.link, color: Colors.blue),
                           title: Text(mData['name'] ?? 'Materi'),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -1127,27 +1149,36 @@ class _TeacherClassDetailScreenState extends State<TeacherClassDetailScreen> {
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(fontSize: 12),
                               ),
-                              if (aData['description'] != null &&
-                                  aData['description']
-                                      .toString()
-                                      .contains('http')) ...[
-                                const SizedBox(height: 4),
+                              if (aData['url'] != null &&
+                                  aData['url'].toString().isNotEmpty) ...[
+                                const SizedBox(height: 6),
                                 InkWell(
-                                  onTap: () {
-                                    final desc = aData['description'] as String;
-                                    final words = desc.split(RegExp(r'\s+'));
-                                    final url = words.firstWhere(
-                                        (w) => w.startsWith('http'),
-                                        orElse: () => "");
-                                    if (url.isNotEmpty) _launchURL(url);
-                                  },
-                                  child: const Text(
-                                    "Buka Link Deskripsi",
-                                    style: TextStyle(
-                                      color: Colors.blue,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      decoration: TextDecoration.underline,
+                                  onTap: () => _launchURL(aData['url']),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                          color: Colors.blue
+                                              .withValues(alpha: 0.2)),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.link,
+                                            size: 14, color: Colors.blue),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          "Buka Link",
+                                          style: TextStyle(
+                                            color: Colors.blue,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ),

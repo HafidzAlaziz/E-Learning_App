@@ -162,7 +162,15 @@ class _StudentCourseDetailScreenState extends State<StudentCourseDetailScreen> {
   }
 
   Future<void> _launchURL(String urlString) async {
-    final Uri url = Uri.parse(urlString);
+    if (urlString.trim().isEmpty) return;
+
+    String formattedUrl = urlString.trim();
+    if (!formattedUrl.startsWith('http://') &&
+        !formattedUrl.startsWith('https://')) {
+      formattedUrl = 'https://$formattedUrl';
+    }
+
+    final Uri url = Uri.parse(formattedUrl);
     try {
       if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
         if (mounted) {
@@ -174,7 +182,8 @@ class _StudentCourseDetailScreenState extends State<StudentCourseDetailScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(
+              content: Text('Gagal membuka link. Pastikan format link benar.')),
         );
       }
     }
@@ -451,7 +460,39 @@ class _StudentCourseDetailScreenState extends State<StudentCourseDetailScreen> {
                               TextStyle(color: Colors.grey[600], fontSize: 10),
                         ),
                     ],
-                  )
+                  ),
+                  if (assignment['url'] != null &&
+                      assignment['url'].toString().isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    InkWell(
+                      onTap: () => _launchURL(assignment['url']),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: statusColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                              color: statusColor.withValues(alpha: 0.2)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.link, size: 14, color: statusColor),
+                            const SizedBox(width: 4),
+                            Text(
+                              "Buka Link",
+                              style: TextStyle(
+                                color: statusColor,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -507,14 +548,27 @@ class _StudentCourseDetailScreenState extends State<StudentCourseDetailScreen> {
               Text(
                   "Feedback: ${submission['feedback'] ?? 'Tidak ada feedback'}",
                   style: TextStyle(color: Colors.grey[700])),
+              const Divider(),
+              const SizedBox(height: 8),
+              const Text("Jawaban Anda:",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+              const SizedBox(height: 8),
               if (submission['content'] != null &&
+                  submission['content'].toString().isNotEmpty) ...[
+                Text(submission['content'],
+                    style: const TextStyle(fontSize: 12)),
+                const SizedBox(height: 8),
+              ],
+              if (submission['link'] != null &&
+                  submission['link'].toString().isNotEmpty) ...[
+                OutlinedButton.icon(
+                  onPressed: () => _launchURL(submission['link']),
+                  icon: const Icon(Icons.open_in_new, size: 16),
+                  label: const Text("Lihat Link Jawaban Saya"),
+                ),
+              ] else if (submission['content'] != null &&
                   submission['content'].toString().contains('http')) ...[
-                const SizedBox(height: 16),
-                const Divider(),
-                const SizedBox(height: 8),
-                const Text("Jawaban Anda (Link):",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                const SizedBox(height: 8),
+                // Fallback for old submissions
                 OutlinedButton.icon(
                   onPressed: () {
                     final content = submission['content'] as String;
@@ -524,7 +578,7 @@ class _StudentCourseDetailScreenState extends State<StudentCourseDetailScreen> {
                     if (url.isNotEmpty) _launchURL(url);
                   },
                   icon: const Icon(Icons.open_in_new, size: 16),
-                  label: const Text("Lihat Jawaban Saya"),
+                  label: const Text("Lihat Jawaban (Link)"),
                 ),
               ],
             ],
@@ -541,6 +595,8 @@ class _StudentCourseDetailScreenState extends State<StudentCourseDetailScreen> {
 
     final contentController =
         TextEditingController(text: submission?['content'] ?? "");
+    final linkController =
+        TextEditingController(text: submission?['link'] ?? "");
     bool isSaving = false;
 
     showDialog(
@@ -564,36 +620,30 @@ class _StudentCourseDetailScreenState extends State<StudentCourseDetailScreen> {
                 controller: contentController,
                 maxLines: 4,
                 decoration: AppTheme.inputDecoration(
-                    context, "Link atau Jawaban Teks", Icons.link),
+                    context, "Jawaban Teks", Icons.description_outlined),
               ),
-              if (assignment['description'] != null &&
-                  assignment['description'].toString().contains('http')) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: linkController,
+                decoration: AppTheme.inputDecoration(
+                    context, "Link Jawaban (Opsional)", Icons.link),
+              ),
+              if (assignment['url'] != null &&
+                  assignment['url'].toString().isNotEmpty) ...[
                 const SizedBox(height: 8),
                 TextButton.icon(
-                  onPressed: () {
-                    final desc = assignment['description'] as String;
-                    final words = desc.split(RegExp(r'\s+'));
-                    final url = words.firstWhere((w) => w.startsWith('http'),
-                        orElse: () => "");
-                    if (url.isNotEmpty) _launchURL(url);
-                  },
+                  onPressed: () => _launchURL(assignment['url']),
                   icon: const Icon(Icons.attachment, size: 16),
-                  label: const Text("Buka Link di Deskripsi",
+                  label: const Text("Buka Link Lampiran Tugas",
                       style: TextStyle(fontSize: 12)),
                 ),
               ],
               if (isSubmitted &&
-                  submission['content'] != null &&
-                  submission['content'].toString().contains('http')) ...[
+                  submission['link'] != null &&
+                  submission['link'].toString().isNotEmpty) ...[
                 const SizedBox(height: 8),
                 TextButton.icon(
-                  onPressed: () {
-                    final content = submission['content'] as String;
-                    final words = content.split(RegExp(r'\s+'));
-                    final url = words.firstWhere((w) => w.startsWith('http'),
-                        orElse: () => "");
-                    if (url.isNotEmpty) _launchURL(url);
-                  },
+                  onPressed: () => _launchURL(submission['link']),
                   icon: const Icon(Icons.assignment_turned_in, size: 16),
                   label: const Text("Cek Link Jawaban Saya",
                       style: TextStyle(fontSize: 12, color: Colors.green)),
@@ -641,6 +691,7 @@ class _StudentCourseDetailScreenState extends State<StudentCourseDetailScreen> {
                               .doc(uid)
                               .set({
                             'content': contentController.text.trim(),
+                            'link': linkController.text.trim(),
                             'submittedAt': FieldValue.serverTimestamp(),
                             'studentName': name ?? 'Siswa',
                             'studentId': uid,

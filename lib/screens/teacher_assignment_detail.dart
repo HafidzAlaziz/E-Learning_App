@@ -109,6 +109,34 @@ class _TeacherAssignmentDetailScreenState
     }
   }
 
+  Future<void> _launchURL(String urlString) async {
+    if (urlString.trim().isEmpty) return;
+
+    String formattedUrl = urlString.trim();
+    if (!formattedUrl.startsWith('http://') &&
+        !formattedUrl.startsWith('https://')) {
+      formattedUrl = 'https://$formattedUrl';
+    }
+
+    final Uri url = Uri.parse(formattedUrl);
+    try {
+      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not launch URL')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Gagal membuka link. Pastikan format link benar.')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Categorize students
@@ -370,17 +398,44 @@ class _TeacherAssignmentDetailScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(content, style: const TextStyle(fontSize: 13)),
-                    if (isLink) ...[
+                    if (content.isNotEmpty) ...[
+                      Text(content, style: const TextStyle(fontSize: 13)),
                       const SizedBox(height: 8),
+                    ],
+                    if (submission['link'] != null &&
+                        submission['link'].toString().isNotEmpty) ...[
+                      const Text("Link Lampiran:",
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                              color: Colors.blue)),
+                      const SizedBox(height: 4),
+                      InkWell(
+                        onTap: () => _launchURL(submission['link']),
+                        child: Text(
+                          submission['link'],
+                          style: const TextStyle(
+                            color: Colors.blue,
+                            fontSize: 12,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       ElevatedButton.icon(
-                        onPressed: () async {
-                          final Uri url = Uri.parse(content);
-                          if (await canLaunchUrl(url)) {
-                            await launchUrl(url,
-                                mode: LaunchMode.externalApplication);
-                          }
-                        },
+                        onPressed: () => _launchURL(submission['link']),
+                        icon: const Icon(Icons.open_in_new, size: 16),
+                        label: const Text("Buka Link Jawaban"),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 0),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                    ] else if (isLink) ...[
+                      // Fallback for older submissions where link was in content
+                      ElevatedButton.icon(
+                        onPressed: () => _launchURL(content),
                         icon: const Icon(Icons.open_in_new, size: 16),
                         label: const Text("Buka Link"),
                         style: ElevatedButton.styleFrom(
