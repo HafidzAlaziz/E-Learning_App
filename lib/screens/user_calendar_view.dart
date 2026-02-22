@@ -347,10 +347,12 @@ class _StudentCalendarViewState extends State<StudentCalendarView> {
                         String dateInfo = "";
                         if (event['startDate'] != null &&
                             event['endDate'] != null) {
-                          DateTime start =
-                              (event['startDate'] as Timestamp).toDate();
-                          DateTime end =
-                              (event['endDate'] as Timestamp).toDate();
+                              DateTime start = DateTime.now(); // Initialize with a default value
+                              DateTime end = DateTime.now(); // Initialize with a default value
+                              final startTs = event['startDate'] as Timestamp?;
+                              final endTs = event['endDate'] as Timestamp?;
+                              if (startTs != null) start = startTs.toDate();
+                              if (endTs != null) end = endTs.toDate();
                           if (!isSameDay(start, end)) {
                             dateInfo =
                                 "${DateFormat('d MMM').format(start)} - ${DateFormat('d MMM').format(end)}";

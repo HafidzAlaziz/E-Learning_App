@@ -20,7 +20,7 @@ import 'package:e_learning_app/screens/admin_course_management.dart';
 import 'package:e_learning_app/screens/user_calendar_view.dart';
 import 'package:e_learning_app/screens/profile_settings_screen.dart';
 import 'package:e_learning_app/screens/teacher_classes_screen.dart';
-
+import 'package:e_learning_app/screens/teacher_assignment_detail.dart';
 import 'package:e_learning_app/screens/teacher_grades_screen.dart';
 import 'package:e_learning_app/screens/admin_major_management.dart';
 import 'package:e_learning_app/screens/select_major_screen.dart';
@@ -101,6 +101,16 @@ class MyApp extends StatelessWidget {
                     courseTitle: args['courseTitle'],
                     assignmentId: args['assignmentId'],
                     meetingId: args['meetingId'],
+                  );
+                },
+                '/teacher-assignment-detail': (context) {
+                  final args = ModalRoute.of(context)!.settings.arguments
+                      as Map<String, dynamic>;
+                  return TeacherAssignmentDetailScreen(
+                    courseId: args['courseId'],
+                    meetingId: args['meetingId'],
+                    assignmentId: args['assignmentId'],
+                    assignmentData: args['assignmentData'],
                   );
                 },
               },

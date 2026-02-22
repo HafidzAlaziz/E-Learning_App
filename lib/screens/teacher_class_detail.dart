@@ -302,7 +302,9 @@ class _TeacherClassDetailScreenState extends State<TeacherClassDetailScreen> {
 
     DateTime selectedDeadline = DateTime.now().add(const Duration(days: 7));
     if (initialData != null && initialData['deadline'] != null) {
+    if (initialData['deadline'] != null && initialData['deadline'] is Timestamp) {
       selectedDeadline = (initialData['deadline'] as Timestamp).toDate();
+    }
     }
 
     String selectedCategory = initialData?['category'] ?? 'assignment';

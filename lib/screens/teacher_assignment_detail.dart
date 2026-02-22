@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:e_learning_app/core/theme.dart';
 import 'package:e_learning_app/widgets/user_avatar.dart';
 
@@ -288,10 +289,11 @@ class _TeacherAssignmentDetailScreenState
             trailing: isSubmitted
                 ? Column(
                     mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      const Icon(Icons.check_circle,
-                          color: Colors.green, size: 20),
-                      if (submission?['grade'] != null)
+                      if (submission?['grade'] != null) ...[
+                        const Icon(Icons.check_circle,
+                            color: Colors.green, size: 20),
                         Text(
                           "${submission!['grade']}",
                           style: TextStyle(
@@ -300,6 +302,25 @@ class _TeacherAssignmentDetailScreenState
                                   (submission!['grade'] as num).toDouble()),
                               fontSize: 12),
                         ),
+                      ] else ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.red.shade200),
+                          ),
+                          child: Text(
+                            "BELUM DINILAI",
+                            style: TextStyle(
+                              color: Colors.red.shade700,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 10,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   )
                 : const Icon(Icons.warning_amber_rounded, color: Colors.orange),

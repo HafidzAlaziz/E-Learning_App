@@ -1145,65 +1145,89 @@ class _StudentHomeViewState extends State<StudentHomeView>
                                     }
                                   }
 
-                                  // Proceed to Assignments
+                                  // 3. Assignments with Submission Status
+                                  Map<String, Map<String, dynamic>> submissionMap = {};
+                                  if (gradeSnap.hasData) {
+                                    for (var doc in gradeSnap.data!.docs) {
+                                      final data = doc.data() as Map<String, dynamic>;
+                                      // submission doc ID is the assignment ID? 
+                                      // Actually, sub-collection path is .../assignments/{assignmentId}/submissions/{studentId}
+                                      // collectionGroup('submissions') will give us the doc.
+                                      // We need to know which assignment this submission belongs to.
+                                      // Let's assume the assignmentId is stored in the submission document or can be extracted from path.
+                                      final pathParts = doc.reference.path.split('/');
+                                      if (pathParts.length >= 6) {
+                                        final assignmentId = pathParts[5];
+                                        submissionMap[assignmentId] = data;
+                                      }
+                                    }
+                                  }
+
                                   if (assignmentSnap.hasData) {
                                     for (var doc in assignmentSnap.data!.docs) {
-                                      final data =
-                                          doc.data() as Map<String, dynamic>;
+                                      final data = doc.data() as Map<String, dynamic>;
 
-                                      final deadlineTs =
-                                          data['deadline'] as Timestamp?;
+                                      final deadlineTs = data['deadline'] as Timestamp?;
                                       if (deadlineTs == null) continue;
                                       final deadline = deadlineTs.toDate();
-                                      if (deadline.isBefore(startOfToday))
-                                        continue;
+                                      
+                                      // Only show if not deadline has passed or if it's already graded/submitted
+                                      final submission = submissionMap[doc.id];
+                                      final isSubmitted = submission != null;
+                                      final isGraded = submission != null && submission['grade'] != null;
+
+                                      if (!isSubmitted && deadline.isBefore(startOfToday)) continue;
 
                                       bool isMine = false;
                                       if (data['courseId'] != null) {
-                                        isMine = enrolledCourseIds
-                                            .contains(data['courseId']);
+                                        isMine = enrolledCourseIds.contains(data['courseId']);
                                       } else {
-                                        final pathParts =
-                                            doc.reference.path.split('/');
+                                        final pathParts = doc.reference.path.split('/');
                                         if (pathParts.length > 1) {
-                                          isMine = enrolledCourseIds
-                                              .contains(pathParts[1]);
+                                          isMine = enrolledCourseIds.contains(pathParts[1]);
                                         }
                                       }
 
-                                      if (!isMine ||
-                                          !_enrolledCourseIds.contains(
-                                              data['courseId'])) continue;
+                                      if (!isMine || !_enrolledCourseIds.contains(data['courseId'])) continue;
 
-                                      final diff = deadline.difference(today);
-                                      final timeLeft = diff.inDays > 0
-                                          ? "${diff.inDays} hari lagi"
-                                          : "${diff.inHours % 24} jam lagi";
+                                      String title = data['title'] ?? 'Tugas Baru';
+                                      String subtitle = "";
+                                      IconData icon = Icons.assignment_late_rounded;
+                                      Color color = Colors.orange;
+
+                                      if (isGraded) {
+                                        title = "Tugas Dinilai: ${data['title']}";
+                                        subtitle = "Nilai Anda: ${submission['grade']}. Cek detail di menu Nilai.";
+                                        icon = Icons.grade_rounded;
+                                        color = Colors.green;
+                                      } else if (isSubmitted) {
+                                        title = "Tugas Terkirim: ${data['title']}";
+                                        subtitle = "Berhasil dikirim, menunggu nilai dari guru.";
+                                        icon = Icons.assignment_turned_in_rounded;
+                                        color = Colors.blue;
+                                      } else {
+                                        final diff = deadline.difference(today);
+                                        final timeLeft = diff.inDays > 0
+                                            ? "${diff.inDays} hari lagi"
+                                            : "${diff.inHours % 24} jam lagi";
+                                        subtitle = "Deadline: ${DateFormat('d MMM, HH:mm').format(deadline)} ($timeLeft)";
+                                      }
 
                                       allItems.add({
-                                        'title': data['title'] ?? 'Tugas Baru',
+                                        'title': title,
                                         'label': 'Tugas Saya',
-                                        'subtitle':
-                                            "Deadline: ${DateFormat('d MMM, HH:mm').format(deadline)} ($timeLeft)",
-                                        'icon': Icons.assignment_late_rounded,
-                                        'color': Colors.orange,
-                                        'date': deadline,
-                                        'type': 'assignment',
+                                        'subtitle': subtitle,
+                                        'icon': icon,
+                                        'color': color,
+                                        'date': isSubmitted ? (submission['submittedAt'] as Timestamp? ?? Timestamp.now()).toDate() : deadline,
+                                        'type': isGraded ? 'grade' : (isSubmitted ? 'submission' : 'assignment'),
                                         'onTap': () {
                                           final courseId = data['courseId'] ??
-                                              (doc.reference.path
-                                                          .split('/')
-                                                          .length >
-                                                      1
-                                                  ? doc.reference.path
-                                                      .split('/')[1]
+                                              (doc.reference.path.split('/').length > 1
+                                                  ? doc.reference.path.split('/')[1]
                                                   : null);
                                           if (courseId != null) {
-                                            final courseTitle =
-                                                _enrolledCourseNames[
-                                                        courseId] ??
-                                                    'Detail Mata Kuliah';
-
+                                            final courseTitle = _enrolledCourseNames[courseId] ?? 'Detail Mata Kuliah';
                                             Navigator.pushNamed(
                                               context,
                                               '/student-course-detail',
@@ -1218,57 +1242,26 @@ class _StudentHomeViewState extends State<StudentHomeView>
                                       });
                                     }
                                   }
+
                                   // 4. Firestore Events
                                   if (eventSnap.hasData) {
                                     for (var doc in eventSnap.data!.docs) {
-                                      final data =
-                                          doc.data() as Map<String, dynamic>;
-                                      if (allItems.any(
-                                          (it) => it['title'] == data['title']))
-                                        continue;
-                                      final start =
-                                          (data['startDate'] as Timestamp)
-                                              .toDate();
+                                      final data = doc.data() as Map<String, dynamic>;
+                                      if (allItems.any((it) => it['title'] == data['title'])) continue;
+                                      final startTs = data['startDate'] as Timestamp?;
+                                      if (startTs == null) continue;
+                                      final start = startTs.toDate();
                                       allItems.add({
                                         'title': data['title'],
-                                        'label': data['type'] == 'holiday'
-                                            ? 'Libur'
-                                            : 'Event',
+                                        'label': data['type'] == 'holiday' ? 'Libur' : 'Event',
                                         'subtitle': data['description'] ?? '',
                                         'icon': data['type'] == 'holiday'
                                             ? Icons.calendar_today_rounded
                                             : Icons.event_note_rounded,
-                                        'color': data['type'] == 'holiday'
-                                            ? Colors.red
-                                            : Colors.blue,
+                                        'color': data['type'] == 'holiday' ? Colors.red : Colors.blue,
                                         'date': start,
-                                        'type': data['type'] == 'holiday'
-                                            ? 'holiday'
-                                            : 'event',
-                                        'onTap': () => widget.onTabChange(4,
-                                            initialDate: start),
-                                      });
-                                    }
-                                  }
-
-                                  // 5. Firestore Grades
-                                  if (gradeSnap.hasData) {
-                                    for (var doc in gradeSnap.data!.docs) {
-                                      final data =
-                                          doc.data() as Map<String, dynamic>;
-                                      final gradedAt =
-                                          (data['gradedAt'] as Timestamp)
-                                              .toDate();
-                                      allItems.add({
-                                        'title': "Tugas Telah Dinilai",
-                                        'label': 'Nilai',
-                                        'subtitle':
-                                            "Nilai Anda: ${data['grade']}. Cek menu Nilai.",
-                                        'icon': Icons.grade_rounded,
-                                        'color': Colors.green,
-                                        'date': gradedAt,
-                                        'type': 'grade',
-                                        'onTap': () => widget.onTabChange(3),
+                                        'type': data['type'] == 'holiday' ? 'holiday' : 'event',
+                                        'onTap': () => widget.onTabChange(4, initialDate: start),
                                       });
                                     }
                                   }

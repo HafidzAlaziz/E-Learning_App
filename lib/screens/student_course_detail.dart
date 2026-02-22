@@ -245,7 +245,9 @@ class _StudentCourseDetailScreenState extends State<StudentCourseDetailScreen> {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  "Hadir: ${DateFormat('HH:mm').format((attendance['timestamp'] as Timestamp).toDate())}",
+                  attendance['timestamp'] != null
+                      ? "Hadir: ${DateFormat('HH:mm').format((attendance['timestamp'] as Timestamp).toDate())}"
+                      : "Hadir",
                   style: const TextStyle(
                       color: Colors.green,
                       fontSize: 10,
@@ -361,7 +363,7 @@ class _StudentCourseDetailScreenState extends State<StudentCourseDetailScreen> {
     final isTarget = widget.assignmentId == assignment['id'];
 
     DateTime? deadline;
-    if (assignment['deadline'] != null) {
+    if (assignment['deadline'] != null && assignment['deadline'] is Timestamp) {
       deadline = (assignment['deadline'] as Timestamp).toDate();
     }
 

@@ -692,7 +692,9 @@ class _TeacherDashboardState extends State<TeacherDashboard>
                 if (eventsSnap.hasData) {
                   for (var doc in eventsSnap.data!.docs) {
                     final data = doc.data() as Map<String, dynamic>;
-                    final start = (data['startDate'] as Timestamp).toDate();
+                    final startTs = data['startDate'] as Timestamp?;
+                    if (startTs == null) continue;
+                    final start = startTs.toDate();
                     allNotifs.add({
                       'type': 'event',
                       'label': data['type'] == 'holiday' ? 'Libur' : 'Event',
@@ -734,8 +736,9 @@ class _TeacherDashboardState extends State<TeacherDashboard>
                     if (!myCourseIds.contains(courseIdInPath)) continue;
 
                     final data = doc.data() as Map<String, dynamic>;
-                    final submittedAt =
-                        (data['submittedAt'] as Timestamp).toDate();
+                    final submittedAtTs = data['submittedAt'] as Timestamp?;
+                    if (submittedAtTs == null) continue;
+                    final submittedAt = submittedAtTs.toDate();
                     final courseDoc = coursesSnap.data!.docs
                         .firstWhere((d) => d.id == courseIdInPath);
 
