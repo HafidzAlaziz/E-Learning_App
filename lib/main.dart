@@ -2,28 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:e_learning_app/services/auth_service.dart';
 import 'package:e_learning_app/core/theme.dart';
-import 'package:e_learning_app/screens/splash_screen.dart';
-import 'package:e_learning_app/screens/admin_dashboard.dart';
-import 'package:e_learning_app/screens/teacher_dashboard.dart';
-import 'package:e_learning_app/screens/student_dashboard.dart';
-import 'package:e_learning_app/screens/admin_assign_teacher.dart';
-import 'package:e_learning_app/screens/teacher_attendance_qr.dart';
-import 'package:e_learning_app/screens/student_krs.dart';
-import 'package:e_learning_app/screens/student_enrolled_courses.dart';
-import 'package:e_learning_app/screens/student_scanner.dart';
-import 'package:e_learning_app/screens/student_grades_screen.dart';
-import 'package:e_learning_app/screens/student_course_detail.dart';
-import 'package:e_learning_app/screens/admin_user_management.dart';
-import 'package:e_learning_app/screens/admin_course_management.dart';
-import 'package:e_learning_app/screens/user_calendar_view.dart';
-import 'package:e_learning_app/screens/profile_settings_screen.dart';
-import 'package:e_learning_app/screens/teacher_classes_screen.dart';
-import 'package:e_learning_app/screens/teacher_assignment_detail.dart';
-import 'package:e_learning_app/screens/teacher_grades_screen.dart';
-import 'package:e_learning_app/screens/admin_major_management.dart';
-import 'package:e_learning_app/screens/select_major_screen.dart';
+import 'package:e_learning_app/screens/auth/splash_screen.dart';
+import 'package:e_learning_app/screens/admin/admin_dashboard.dart';
+import 'package:e_learning_app/screens/teacher/teacher_dashboard.dart';
+import 'package:e_learning_app/screens/student/student_dashboard.dart';
+import 'package:e_learning_app/screens/admin/admin_assign_teacher.dart';
+import 'package:e_learning_app/screens/teacher/teacher_attendance_qr.dart';
+import 'package:e_learning_app/screens/student/student_krs.dart';
+import 'package:e_learning_app/screens/student/student_enrolled_courses.dart';
+import 'package:e_learning_app/screens/student/student_scanner.dart';
+import 'package:e_learning_app/screens/student/student_grades_screen.dart';
+import 'package:e_learning_app/screens/student/student_course_detail.dart';
+import 'package:e_learning_app/screens/admin/admin_user_management.dart';
+import 'package:e_learning_app/screens/admin/admin_course_management.dart';
+import 'package:e_learning_app/screens/common/user_calendar_view.dart';
+import 'package:e_learning_app/screens/common/profile_settings_screen.dart';
+import 'package:e_learning_app/screens/teacher/teacher_classes_screen.dart';
+import 'package:e_learning_app/screens/teacher/teacher_assignment_detail.dart';
+import 'package:e_learning_app/screens/teacher/teacher_grades_screen.dart';
+import 'package:e_learning_app/screens/admin/admin_major_management.dart';
+import 'package:e_learning_app/screens/auth/select_major_screen.dart';
 import 'package:flutter/foundation.dart';
 
 import 'package:e_learning_app/firebase_options.dart';
@@ -139,7 +138,7 @@ class ResponsiveWrapper extends StatelessWidget {
           decoration: BoxDecoration(
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
+                color: Colors.black.withOpacity(0.1),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),

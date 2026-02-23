@@ -128,7 +128,7 @@ class _UserAvatarState extends State<UserAvatar> {
   Widget _buildAvatarImage(ImageProvider? imageProvider) {
     Widget avatarContent = CircleAvatar(
       radius: widget.radius,
-      backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
+      backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
       backgroundImage: imageProvider,
       child: imageProvider == null
           ? Icon(Icons.person_rounded,
