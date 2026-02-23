@@ -57,9 +57,9 @@ Silakan unduh versi terbaru aplikasi untuk mencobanya langsung di perangkat Andr
     <td align="center"><b>Dashboard</b></td>
   </tr>
   <tr>
-    <td><img src="https://raw.githubusercontent.com/HafidzAlaziz/E-Learning_App/main/assets/images/app_logo.png" width="200"></td>
-    <td><i>(Tampilan Login Google)</i></td>
-    <td><i>(Tampilan Dashboard User)</i></td>
+    <td><i>(Tampilan Admin)</i></td>
+    <td><i>(Tampilan Guru)</i></td>
+    <td><i>(Tampilan Mahasiswa)</i></td>
   </tr>
 </table>
 
