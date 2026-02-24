@@ -48,5 +48,21 @@ Silakan unduh versi terbaru aplikasi untuk mencobanya langsung di perangkat Andr
 
 ---
 
+## 📸 Tampilan Aplikasi
+
+<table style="width: 100%; border: none;">
+  <tr>
+    <td align="center"><b>Splash Screen</b></td>
+    <td align="center"><b>Login Screen</b></td>
+    <td align="center"><b>Dashboard</b></td>
+  </tr>
+  <tr>
+    <td><img src="https://raw.githubusercontent.com/HafidzAlaziz/E-Learning_App/main/assets/images/app_logo.png" width="200"></td>
+    <td><i>(Tampilan Login Google)</i></td>
+    <td><i>(Tampilan Dashboard User)</i></td>
+  </tr>
+</table>
+
+---
 
 Developed by [Hafidz Alaziz](https://github.com/HafidzAlaziz)
